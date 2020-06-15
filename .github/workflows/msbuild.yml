@@ -1,0 +1,59 @@
+name: MSBuild
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: MSBuild
+    # runs-on: self-hosted
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Setup MSBuild.exe
+      uses: warrenbuckley/Setup-MSBuild@v1
+
+    - name: Setup VSTest Path
+      uses: darenm/Setup-VSTest@v1
+
+    - uses: nuget/setup-nuget@v1
+      with:
+        nuget-api-key: ${{ secrets.NuGetAPIKey }}
+        nuget-version: '5.x'
+    - name: MSBuild
+      run: |
+        nuget restore sample.sln
+        msbuild sample.sln -p:OutDir="out/"
+      working-directory: ./sample
+      shell: cmd
+
+    - name: MSTest
+      run: |
+        vstest.console test.dll /logger:trx /Diag:lot.txt"
+      working-directory: ./sample/test/out
+      shell: cmd
+
+    - name: Upload artifact core
+      uses: actions/upload-artifact@v1
+      with:
+        name: build-result-core
+        path: ./sample/core/out/
+
+    - name: Upload artifact test
+      uses: actions/upload-artifact@v1
+      with:
+        name: build-result-test
+        path: ./sample/test/out/
+
+    - name: Upload artifact console
+      uses: actions/upload-artifact@v1
+      with:
+        name: build-result-console
+        path: ./sample/console/out/
